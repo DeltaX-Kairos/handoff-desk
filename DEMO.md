@@ -1,6 +1,6 @@
 # Handoff Desk demonstration
 
-This walkthrough uses fictional CSVs. It demonstrates a delivery review, not client acceptance or payment. Target recording length: 90 seconds.
+This walkthrough uses fictional CSVs. It demonstrates a delivery review, not client acceptance or payment. Target recording length: 90 seconds. The published cut is [here](https://youtu.be/DV4hOw7MVfA).
 
 ## 0:00–0:12 — Start with the mismatch
 

@@ -13,7 +13,7 @@ and `amount` → download the checked pack.
 
 The files are intentionally fictional: `final.csv` is the wrong month;
 `final_v2.csv` matches the required `2026-09` period. Watch the [90-second
-judging path](https://youtu.be/QCZHlowTx1A), then try the live desk.
+judging path](https://youtu.be/DV4hOw7MVfA), then try the live desk.
 
 For agencies finishing data and automation projects: compare selected deliverables
 with an explicit client checklist, resolve conflicting versions, and export a
