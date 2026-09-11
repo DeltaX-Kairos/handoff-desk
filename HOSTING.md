@@ -1,6 +1,6 @@
-# Hosting gateway — deployment candidate
+# Hosting gateway — judging deployment
 
-`server.py` remains the original single-user loopback preview. `hosted.py` provides a separate WSGI gateway with private visitor sessions. The gateway has passed application checks and a real local Gunicorn HTTP check; public HTTPS, AWS deployment and live inference through this gateway have not been verified.
+`server.py` remains the original single-user loopback preview. `hosted.py` provides a separate WSGI gateway with private visitor sessions. The gateway is deployed at https://handoff.deltaxevaluate.com on an AWS Lightsail Ubuntu host behind Nginx HTTPS. On September 11, 2026, 34 public HTTP assertions covered visitor cookies, isolation, fictional and uploaded exports, and live AWS investigation. A controlled restart cleared visitor directories and invalidated old access while retaining the consumed aggregate model allowance. The 30-day credential was separately verified with a live investigation after replacement.
 
 ## Runtime configuration
 
@@ -33,12 +33,14 @@ Idle visitor sessions expire after one hour and a background sweep removes their
 
 Startup refuses unexpected names, symlinks in place of visitor directories, and invalid ownership-lock files before removing any visitor directories. Symlinks inside a visitor directory are removed without following their targets. A cleanup failure prevents startup and requires operator inspection. Local restart tests verify old-cookie rejection, orphan removal, external-file preservation and unchanged aggregate accounting. Retention while the service is stopped is enforced at its next successful startup, not by an independent system job.
 
-## Validation still required before publication
+## Verified deployment and operating limits
 
-- Verify actual AWS service and credit eligibility, final resource cost, and credential expiry/rotation through judging.
-- Configure and verify HTTPS, proxy limits and process supervision.
-- Repeat two-visitor upload, review, export and isolation checks through the public HTTPS origin.
-- Verify one authorized live model request through the gateway and reconcile AWS usage.
-- Verify restart preserves aggregate allowance, invalidates old visitor access and does not mix visitors.
+The judging host runs one Gunicorn gthread worker with four threads, bound to loopback. Nginx terminates TLS, limits requests to 3 MiB, applies per-address request/connection limits, and uses a 240-second upstream read timeout without upstream retries. A dedicated unprivileged system service owns its private data directory. Credentials are held in protected operator configuration outside the repository; the browser never receives the key.
 
-Gunicorn 26.2.0 was selected from the official [PyPI release](https://pypi.org/project/gunicorn/26.2.0/). No cloud resource was created by these instructions.
+The initial site-wide allowance is 1,000 model attempts. Failed attempts count. This is not a hard dollar or wall-clock cap: the 180-second application deadline is checked before each model call and cannot interrupt a call already running. No automatic key or budget replenishment occurs. The operator must monitor remaining credit, model allowance and session capacity through judging. Anonymous traffic can exhaust demo capacity.
+
+Use a full service stop/start for application replacements, not a graceful overlapping-worker reload or Gunicorn preload. The exclusive lock prevents a replacement from cleaning a live worker's files. Keep the allowance database and ownership lock across restarts. Stopped-service files are removed on the next successful startup.
+
+The owner approved hosting through October 8, 2026. Server, dedicated IP, DNS record and judging credential must be removed afterward unless renewed by the owner. Free judging access depends on continued AWS credit and allowance availability; the current checks do not prove uninterrupted future uptime.
+
+Gunicorn 26.2.0 was selected from the official [PyPI release](https://pypi.org/project/gunicorn/26.2.0/).

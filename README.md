@@ -1,4 +1,4 @@
-# Handoff Desk — local prototype
+# Handoff Desk
 
 For agencies finishing data and automation projects: compare selected deliverables
 with an explicit client checklist, resolve conflicting versions, and export a
@@ -7,6 +7,12 @@ checked delivery package with an unsent email.
 This is newly written hackathon development using fictional files. It contains no
 private DeltaX source. It is an experimental prototype, not a production service.
 No prize or customer revenue has been earned from this prototype.
+
+## Try the judging demo
+
+[Open Handoff Desk](https://handoff.deltaxevaluate.com). No account or payment is required. Start with the clearly marked fictional data; explicitly requesting an investigation sends selected file content to AWS. Each visitor has a separate temporary workspace. Files expire after one hour of inactivity and visitor access ends on service restart.
+
+The demo is funded through October 8, 2026, with a shared allowance of 1,000 model attempts and one investigation at a time. Capacity is limited; this is an experimental judging demo, not a production service.
 
 ## Current scope
 
@@ -59,7 +65,7 @@ See [the architecture](ARCHITECTURE.md) for implemented and pending boundaries.
 `python live_agent.py --transport bedrock-mantle --model openai.gpt-oss-20b --region us-east-2`
 prints an offline configuration check. It makes no cloud calls. Only adding
 `--execute` starts the interactive model session; this requires an authorized
-authorized credential supplied through `AWS_BEARER_TOKEN_BEDROCK` in the process
+credential supplied through `AWS_BEARER_TOKEN_BEDROCK` in the process
 environment. Never commit a credential or include it in a command argument.
 
 The session allows at most six attempted model calls, 1,024 output tokens per
@@ -102,4 +108,4 @@ Do not run paid inference until model, permissions and usage limits are configur
 
 ## Hosting candidate
 
-A separate visitor-isolated WSGI gateway is implemented in `hosted.py`; do not expose the single-user preview directly. See [HOSTING.md](HOSTING.md) for explicit operator configuration, durable aggregate model admission, tested boundaries and remaining public deployment checks. The full suite currently passes 63 tests. Hosting remains unverified.
+A separate visitor-isolated WSGI gateway is implemented in `hosted.py`; do not expose the single-user preview directly. See [HOSTING.md](HOSTING.md) for explicit operator configuration, durable aggregate model admission, tested boundaries and remaining public deployment checks. The full suite passes 66 tests, including a run on the AWS Ubuntu host. Public HTTPS checks verified separate visitors, CSV upload/export, one live AWS investigation and restart cleanup with the consumed aggregate allowance preserved. See HOSTING.md for the scope of this evidence.

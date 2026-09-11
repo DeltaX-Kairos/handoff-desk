@@ -32,7 +32,7 @@ Export and open the ZIP. Show the chosen final CSV, exceptions CSV, confirmed di
 
 Show the selected-CSV upload form. Explain that a user can supply candidate versions, required columns and an optional period. This mode does not infer source/output accounting. Uploading makes no model call; an explicit investigation can send selected file contents to AWS.
 
-Close with the scope: a local prototype currently supports bounded CSV handoff review. Hosted judging access and session isolation must be verified before describing a public service as ready.
+Close with the scope: the judging prototype supports bounded CSV handoff review at https://handoff.deltaxevaluate.com. Its temporary visitor sessions and shared inference allowance are limited; this is not a production service.
 
 ## Reproduce without cloud access
 

@@ -8,8 +8,8 @@ evidence can inform those choices, but it cannot authorize them.
 
 ```mermaid
 flowchart TD
-    Person[Person using local interface] -->|Choose file and confirm meanings| App[Application-owned session]
-    Person -->|Check or prepare package| HTTP[Loopback HTTP server]
+    Person[Person using browser interface] -->|Choose file and confirm meanings| App[Application-owned session]
+    Person -->|Check or prepare package| HTTP[HTTPS proxy and visitor-isolated gateway]
     HTTP --> Tools[Strands tool wrappers]
     App --> Tools
     Tools --> Core[Deterministic CSV checks]
@@ -19,7 +19,7 @@ flowchart TD
     Gate -->|No| Clarify[Return missing evidence or clarification]
     Clarify --> Person
     Gate -->|Yes| Package[Selected outputs, dictionary, manifest and unsent email]
-    Package --> Download[Local ZIP download]
+    Package --> Download[Private visitor ZIP download]
     Model[AWS Mantle model: live path verified] -. Investigation only .-> Tools
 ```
 
@@ -51,16 +51,11 @@ a confirmed dictionary and an email draft marked as unsent. Raw reference inputs
 are excluded unless independently required. A successful archive is not proof of
 customer acceptance, delivery, payment or earnings.
 
-## Remaining deployment work
+## Deployment evidence
 
 Live Strands investigation through AWS Mantle and the local HTTP route has been verified with fictional files. Deterministic checks and human confirmations remain separate from model investigation. Model-call limits persist across requests; each request starts a fresh deadline.
 Optional local confirmation recovery is implemented; it is not a multi-user
 database or protection against a malicious owner modifying their own files.
-Cloud hosting must provide isolated per-user workspaces, hosted confirmation
-storage, bounded inference, controlled uploads and free judging access. These are
-deployment requirements, not properties proven by the local HTTP checks.
+The public AWS deployment provides isolated visitor workspaces, bounded uploads, durable aggregate model admission and free judging access. Public HTTPS checks exercised two visitors, cross-session rejection, upload/export, live AWS investigation and restart cleanup. These checks cover the tested scenarios; they do not establish business correctness or uninterrupted future availability.
 
-No private DeltaX engine implementation, customer files or credentials belong in
-the public repository or demo recording.
-
-The separate hosting gateway now implements visitor isolation and durable aggregate model-attempt admission. These passed offline tests and a local Gunicorn HTTP check. Public proxy/TLS, live gateway inference and crash-orphan cleanup remain deployment work; see HOSTING.md.
+No private DeltaX engine implementation, customer files or credentials belong in the public repository or demo recording. See HOSTING.md for the deployment configuration, limits and operating obligations.
