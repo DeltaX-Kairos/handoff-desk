@@ -1,5 +1,20 @@
 # Handoff Desk
 
+## Judges — start here
+
+**Live:** [handoff.deltaxevaluate.com](https://handoff.deltaxevaluate.com)
+
+Handoff Desk checks which fictional CSV delivery meets the contract, confirms
+three meanings, and exports a checked ZIP without sending email.
+
+**One-line path:** pick `final.csv` → **Check delivery** → see the red
+`2026-08` vs `2026-09` failure → pick `final_v2.csv` → confirm `id`, `period`
+and `amount` → download the checked pack.
+
+The files are intentionally fictional: `final.csv` is the wrong month;
+`final_v2.csv` matches the required `2026-09` period. Watch the [90-second
+judging path](https://youtu.be/QCZHlowTx1A), then try the live desk.
+
 For agencies finishing data and automation projects: compare selected deliverables
 with an explicit client checklist, resolve conflicting versions, and export a
 checked delivery package with an unsent email.
@@ -98,10 +113,10 @@ targets AWS; it does not use an unrelated OpenAI account.
 
 Upload one to eight UTF-8 CSV candidate versions of a single deliverable, up to 512 KiB per file and 2 MiB total. Specify required columns and an optional reporting period. The interface builds previews and definition fields from those files. Selection and definitions remain human decisions. Uploading alone makes no cloud call; an explicitly requested investigation may send file contents to AWS. Use only data you are permitted to process there. Source/output row accounting is not inferred for uploaded projects.
 
-## Not yet demonstrated
+## Scope and limits
 
-- Public video publication and final contest submission. Hosted judging access and a recorded fictional-data demo have been verified.
-- Real customer files, business correctness, or client acceptance.
+- The public judging URL, fictional-data video, source repository and contest submission are live.
+- No real customer files, business correctness, client acceptance, prize or customer revenue are claimed.
 
 Prototype tool count is bounded, but it is not a provider-dollar spending cap.
 Do not run paid inference until model, permissions and usage limits are configured.

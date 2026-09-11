@@ -167,7 +167,15 @@ class Workspace:
                     period = requirement["period"]
                     column, expected = period["column"], str(period["value"])
                     observed = sorted(set(row.get(column, "") for row in rows))
-                    evidence["period"] = {"column": column, "expected": expected, "observed": observed}
+                    evidence["period"] = {
+                        "column": column,
+                        "expected": expected,
+                        "observed": observed,
+                        "mismatched_rows": [
+                            {header: row.get(header, "") for header in headers}
+                            for row in rows if row.get(column, "") != expected
+                        ][:5],
+                    }
                     if column not in headers or not rows or observed != [expected]:
                         problems.append("Period does not match explicit requirement")
                 if requirement.get("require_dictionary"):

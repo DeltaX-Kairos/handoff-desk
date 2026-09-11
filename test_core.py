@@ -43,6 +43,8 @@ class HandoffTests(unittest.TestCase):
     def test_wrong_period_blocks(self):
         result = self.ws.review(self.req, {"clean-data": "final.csv"})
         self.assertEqual(result["status"], "unresolved")
+        self.assertEqual(result["items"][0]["evidence"]["period"]["mismatched_rows"],
+                         [{"id": "A", "period": "2026-08", "amount": "12"}])
 
     def test_change_after_review(self):
         review = self.ready()
