@@ -100,12 +100,12 @@ Upload one to eight UTF-8 CSV candidate versions of a single deliverable, up to 
 
 ## Not yet demonstrated
 
-- Hosted judging access, demo recording and submission.
+- Public video publication and final contest submission. Hosted judging access and a recorded fictional-data demo have been verified.
 - Real customer files, business correctness, or client acceptance.
 
 Prototype tool count is bounded, but it is not a provider-dollar spending cap.
 Do not run paid inference until model, permissions and usage limits are configured.
 
-## Hosting candidate
+## Hosted judging prototype
 
-A separate visitor-isolated WSGI gateway is implemented in `hosted.py`; do not expose the single-user preview directly. See [HOSTING.md](HOSTING.md) for explicit operator configuration, durable aggregate model admission, tested boundaries and remaining public deployment checks. The full suite passes 69 tests, including a run on the AWS Ubuntu host. Public HTTPS checks verified separate visitors, CSV upload/export, one live AWS investigation and restart cleanup with the consumed aggregate allowance preserved. See HOSTING.md for the scope of this evidence.
+A separate visitor-isolated WSGI gateway is implemented in `hosted.py`; do not expose the single-user preview directly. See [HOSTING.md](HOSTING.md) for explicit operator configuration, durable aggregate model admission, tested boundaries and operational limits. The full suite passes 69 tests, including a run on the AWS Ubuntu host. Public HTTPS checks verified separate visitors, CSV upload/export, one live AWS investigation and restart cleanup with the consumed aggregate allowance preserved. See HOSTING.md for the scope of this evidence.
