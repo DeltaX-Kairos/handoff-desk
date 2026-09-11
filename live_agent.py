@@ -39,6 +39,7 @@ class CallBudget:
         self.clock = clock
         self.started = clock()
         self.calls = 0
+        self.stop_code = None
         self.lock = threading.Lock()
 
     def register_hooks(self, registry, **kwargs):
@@ -48,16 +49,21 @@ class CallBudget:
         """Human-request boundary only: renew deadline without renewing call quota."""
         with self.lock:
             self.started = self.clock()
+            self.stop_code = None
 
     def before_model(self, event):
         with self.lock:
             if self.calls >= self.limits.model_calls:
+                self.stop_code = 'model_call_limit'
                 event.cancel = 'Session model-call limit reached'
             elif self.clock() - self.started >= self.limits.session_seconds:
+                self.stop_code = 'turn_deadline'
                 event.cancel = 'Turn deadline reached before model call'
             elif event.projected_input_tokens is None:
+                self.stop_code = 'input_estimate_unavailable'
                 event.cancel = 'Input estimate unavailable; refusing unbounded call'
             elif event.projected_input_tokens > self.limits.projected_input_tokens:
+                self.stop_code = 'input_limit'
                 event.cancel = 'Projected input exceeds session limit'
             else:
                 if self.admission is not None:
@@ -66,6 +72,7 @@ class CallBudget:
                     except Exception:
                         accepted = False
                     if not accepted:
+                        self.stop_code = 'aggregate_allowance'
                         event.cancel = 'Aggregate model allowance unavailable or exhausted'
                         return
                 self.calls += 1

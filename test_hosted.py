@@ -10,6 +10,8 @@ from types import SimpleNamespace
 from admission import Admission
 from hosted import Application
 from live_agent import CallBudget, Limits
+from investigation import Investigation, InvestigationError
+from unittest.mock import Mock
 
 
 class HostedTests(unittest.TestCase):
@@ -55,6 +57,23 @@ class HostedTests(unittest.TestCase):
         self.assertEqual(self.call('/action',a,t,{'action':'review'},origin='https://evil.example')['status'],'403 Forbidden')
         self.assertEqual(self.call('/state',a,host='evil.example')['status'],'403 Forbidden')
         self.assertEqual(self.call('/state','__Host-handoff=guessed')['status'],'401 Unauthorized')
+
+    def test_investigation_errors_are_actionable_and_sanitized_over_http(self):
+        cookie,token=self.visitor()
+        demo=next(iter(self.app.sessions.entries.values())).demo
+        for exhausted in (False,True):
+            budget=CallBudget(Limits())
+            if exhausted:budget.calls=6
+            def run(prompt):
+                event=SimpleNamespace(projected_input_tokens=20,cancel=None)
+                budget.before_model(event)
+                raise RuntimeError('secret-provider-auth-value')
+            demo.investigation=Investigation(demo.session,'model','region',Mock(return_value=(run,budget)))
+            response=self.call('/action',cookie,token,{'action':'investigate','prompt':'Check files'})
+            expected='model_call_limit' if exhausted else 'service_unavailable'
+            self.assertEqual(response['status'],'400 Bad Request')
+            self.assertEqual(json.loads(response['body']),{'error':InvestigationError.MESSAGES[expected],'error_code':expected})
+            self.assertNotIn(b'secret',response['body'])
 
     def test_expiration_deletes_files(self):
         a,t=self.visitor();entry=next(iter(self.app.sessions.entries.values()));path=entry.root

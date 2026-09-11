@@ -2,6 +2,24 @@
 from live_agent import build_live_agent
 
 
+class InvestigationError(ValueError):
+    """Public error assembled solely from fixed messages, never exception text."""
+    MESSAGES = {
+        'model_call_limit': 'This project has reached its AI call allowance. Continue with the delivery checks and human choices; no automatic retry was made.',
+        'turn_deadline': 'AI investigation stopped at the turn time limit before another model call. Try a narrower question or continue with the delivery checks.',
+        'input_estimate_unavailable': 'AI investigation stopped because its input size could not be estimated. Continue with the delivery checks; no automatic retry was made.',
+        'input_limit': 'AI investigation stopped because the estimated input exceeded its limit. Use fewer or smaller files in a new project, or continue with the delivery checks.',
+        'aggregate_allowance': 'The shared AI allowance is exhausted or unavailable. Continue with the delivery checks; the operator must check the allowance before further AI use.',
+        'configuration_unavailable': 'AI investigation could not initialize. The operator must check the model configuration and access. Delivery checks remain available; no automatic retry was made.',
+        'service_unavailable': 'AI investigation could not complete. The model service or investigation may be unavailable. Delivery checks remain available; no automatic retry was made.',
+        'invalid_prompt': 'Enter a question containing 1–4000 characters.',
+    }
+
+    def __init__(self, code):
+        self.code = code if isinstance(code, str) and code in self.MESSAGES else 'service_unavailable'
+        super().__init__(self.MESSAGES[self.code])
+
+
 class Investigation:
     def __init__(self, session, model_id, region, builder=build_live_agent, transport='bedrock-runtime', admission=None):
         if not isinstance(model_id, str) or not model_id.strip() or not isinstance(region, str) or not region.strip():
@@ -18,9 +36,9 @@ class Investigation:
 
     def investigate(self, prompt):
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 4000:
-            raise ValueError('Prompt must contain 1–4000 characters')
+            raise InvestigationError('invalid_prompt')
         if self._build_failed:
-            raise ValueError('Investigation unavailable; start a new session after checking configuration')
+            raise InvestigationError('configuration_unavailable')
         try:
             if self._agent is None:
                 try:
@@ -30,12 +48,19 @@ class Investigation:
                     self._agent, self._budget = self.builder(self.session, self.model_id, self.region, **options)
                 except Exception:
                     self._build_failed = True
-                    raise
+                    raise InvestigationError('configuration_unavailable') from None
             self._budget.begin_turn()
             response = self._agent(prompt)
+            # SDK cancellation may return a result instead of raising. Do not
+            # present an explicitly stopped run as a completed investigation.
+            stop_code = getattr(self._budget, 'stop_code', None)
+            if stop_code:
+                raise InvestigationError(stop_code)
             return {'message': str(response), 'attempted_model_calls': self._budget.calls,
                     'review_required': True}
+        except InvestigationError:
+            raise
         except Exception:
             # Do not return exception text, stack traces or provider request details.
             # Existing agent/budget is preserved; failures cannot reset call limits.
-            raise ValueError('Investigation stopped or unavailable. Check configuration and session limits; no automatic retry.') from None
+            raise InvestigationError(getattr(self._budget, 'stop_code', None)) from None

@@ -21,6 +21,7 @@ import time
 
 from server import Demo
 from core import HandoffError
+from investigation import InvestigationError
 
 COOKIE = '__Host-handoff'
 
@@ -196,6 +197,8 @@ class Application:
                 if action == 'new_project':
                     result.update(hosted=True, retention_seconds=self.sessions.ttl)
                 return reply('200 OK', result)
+        except InvestigationError as exc:
+            return reply('400 Bad Request', {'error':str(exc), 'error_code':exc.code})
         except PermissionError:
             return reply('401 Unauthorized', {'error':'Session expired; reload the page'})
         except OverflowError:

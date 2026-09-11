@@ -11,6 +11,7 @@ from copy import deepcopy
 from contextlib import ExitStack
 from agent import HandoffSession
 from core import Workspace, HandoffError
+from investigation import InvestigationError
 
 
 class Demo:
@@ -207,6 +208,8 @@ def handler_for(demo, port):
                     raise ValueError('Invalid request size')
                 result = demo.act(payload['action'], payload)
                 self.send(200, json.dumps(result).encode())
+            except InvestigationError as exc:
+                self.send(400, json.dumps({'error': str(exc), 'error_code': exc.code}).encode())
             except (ValueError, KeyError, TypeError, HandoffError) as exc:
                 self.send(400, json.dumps({'error': str(exc)}).encode())
     return Handler

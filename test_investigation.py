@@ -2,7 +2,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
 
-from investigation import Investigation
+from investigation import Investigation, InvestigationError
 from live_agent import CallBudget, Limits
 
 
@@ -69,9 +69,48 @@ class InvestigationTests(unittest.TestCase):
             with self.assertRaises(ValueError) as caught:
                 investigation.investigate('Check files')
             self.assertNotIn('secret-provider-auth-value', str(caught.exception))
+            self.assertEqual(caught.exception.code, 'service_unavailable')
             self.assertTrue(caught.exception.__suppress_context__)
         self.assertEqual(budget.calls, 2)
         self.assertEqual(builder.call_count, 1)
+
+    def test_known_budget_stops_survive_sdk_raise_or_return(self):
+        cases = [
+            ('model_call_limit', {'calls':6}, 20, None),
+            ('turn_deadline', {}, 20, 181),
+            ('input_estimate_unavailable', {}, None, None),
+            ('input_limit', {}, 8001, None),
+            ('aggregate_allowance', {}, 20, None),
+        ]
+        for code, attributes, estimate, elapsed in cases:
+            for raises in (False, True):
+                with self.subTest(code=code,raises=raises):
+                    clock=Mock(return_value=0)
+                    budget=CallBudget(Limits(),clock,admission=(lambda:False) if code=='aggregate_allowance' else None)
+                    for key,value in attributes.items():setattr(budget,key,value)
+                    def run(prompt):
+                        if elapsed is not None:clock.return_value=elapsed
+                        event=SimpleNamespace(projected_input_tokens=estimate,cancel=None)
+                        budget.before_model(event)
+                        self.assertTrue(event.cancel)
+                        if raises:raise RuntimeError('secret-provider-auth-value')
+                        return 'secret-provider-cancellation-result'
+                    investigation=Investigation(Mock(),'model','region',Mock(return_value=(run,budget)))
+                    with self.assertRaises(InvestigationError) as caught:
+                        investigation.investigate('Check files')
+                    self.assertEqual(caught.exception.code,code)
+                    self.assertEqual(str(caught.exception),InvestigationError.MESSAGES[code])
+                    self.assertNotIn('secret',str(caught.exception))
+
+    def test_new_turn_does_not_mislabel_provider_failure_with_old_stop(self):
+        budget=CallBudget(Limits())
+        budget.stop_code='input_limit'
+        agent=Mock(side_effect=RuntimeError('secret-provider-auth-value'))
+        investigation=Investigation(Mock(),'model','region',Mock(return_value=(agent,budget)))
+        with self.assertRaises(InvestigationError) as caught:
+            investigation.investigate('Check files')
+        self.assertEqual(caught.exception.code,'service_unavailable')
+        self.assertIsNone(budget.stop_code)
 
     def test_failed_initialization_does_not_automatically_retry(self):
         builder = Mock(side_effect=RuntimeError('secret-provider-auth-value'))
