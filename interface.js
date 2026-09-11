@@ -47,11 +47,14 @@ function renderReview(review){
   result.replaceChildren();result.className=review.status==='supported'?'ready':'error';badge.textContent=review.status==='supported'?'Ready to package':'Needs attention';
   for(const item of review.items){
     if(item.status!=='supported'&&item.evidence?.period){
-      const period=item.evidence.period,focus=element('div',undefined,'failure-focus');
+      const period=item.evidence.period,hasMismatch=(period.mismatched_rows||[]).length>0||(period.observed||[]).some(value=>String(value)!==String(period.expected));
+      if(hasMismatch) {
+      const focus=element('div',undefined,'failure-focus');
       focus.append(element('strong','Period mismatch — check delivery first'));
       focus.append(element('div','Contract requires '+period.column+' = '+period.expected+', but '+item.file+' contains '+(period.observed||[]).join(', ')+'.'));
       const rows=period.mismatched_rows||[];if(rows.length){const key=Object.hasOwn(rows[0],'id')?'id':Object.keys(rows[0])[0];focus.append(element('div','Failing cells: '+rows.slice(0,3).map(row=>'('+String(row[key]??'')+', '+String(row[period.column]??'')+')').join(' · ')));}
       result.append(focus);
+      }
     }
     const message=item.status==='supported'?'Checked: required columns, confirmed meanings'+(item.requirement.period?', required period':'')+(item.requirement.row_accounting?', source ID occurrences':'')+'.':item.reason||(item.problems||[]).join(' · ');result.append(element('p',message));
   }
