@@ -29,13 +29,14 @@ The gateway admits at most 32 active sessions, 120 actions per session and eight
 
 Every permitted model attempt reserves one unit in a durable SQLite allowance before invocation. Failed or uncertain attempts remain counted. New projects, new visitors and process restarts cannot replenish the allowance. Changing the configured maximum against an existing database is refused for explicit operator reconciliation. This is an attempt bound combined with existing token estimates/output limits, not a precise dollar cap. Deleting or replacing the database defeats accounting and must never be part of an automatic restart.
 
-Idle visitor sessions expire after one hour and a background sweep removes their files at roughly one-minute intervals while the worker runs. Visitor access is not restored after process restart. **Crash-orphan directories need an operator retention job before deployment**; the current worker does not reclaim unregistered directories from earlier processes. Do not claim comprehensive retention enforcement yet.
+Idle visitor sessions expire after one hour and a background sweep removes their files at roughly one-minute intervals while the worker runs. Visitor access is not restored after process restart. Before accepting traffic, startup removes all prior visitor directories from the dedicated `sessions` directory while preserving the model allowance database in its parent. An exclusive process lock prevents a second worker from deleting a running worker's files. Stop the old worker before starting its replacement; overlapping graceful worker reloads are unsupported. Do not delete the `.owner.lock` file, which must retain the same inode across restarts.
+
+Startup refuses unexpected names, symlinks in place of visitor directories, and invalid ownership-lock files before removing any visitor directories. Symlinks inside a visitor directory are removed without following their targets. A cleanup failure prevents startup and requires operator inspection. Local restart tests verify old-cookie rejection, orphan removal, external-file preservation and unchanged aggregate accounting. Retention while the service is stopped is enforced at its next successful startup, not by an independent system job.
 
 ## Validation still required before publication
 
 - Verify actual AWS service and credit eligibility, final resource cost, and credential expiry/rotation through judging.
 - Configure and verify HTTPS, proxy limits and process supervision.
-- Add and verify crash-orphan cleanup without deleting the model allowance database.
 - Repeat two-visitor upload, review, export and isolation checks through the public HTTPS origin.
 - Verify one authorized live model request through the gateway and reconcile AWS usage.
 - Verify restart preserves aggregate allowance, invalidates old visitor access and does not mix visitors.

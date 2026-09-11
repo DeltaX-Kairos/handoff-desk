@@ -9,9 +9,12 @@ from http.cookies import SimpleCookie, CookieError
 from pathlib import Path
 from urllib.parse import urlsplit
 import json
+import fcntl
 import os
+import re
 import secrets
 import shutil
+import stat
 import tempfile
 import threading
 import time
@@ -37,8 +40,29 @@ class Sessions:
     def __init__(self, root, factory, maximum=32, ttl=3600, clock=time.monotonic):
         self.root = Path(root)
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if self.root.is_symlink() or self.root.stat().st_mode & 0o077:
+        if self.root.is_symlink() or not self.root.is_dir() or self.root.stat().st_uid != os.getuid() or self.root.stat().st_mode & 0o077:
             raise ValueError('Session root must be a private directory')
+        # A replacement worker must not erase files still used by an old worker.
+        # Keep the lock inode in place across restarts; unlinking it defeats flock.
+        fd = os.open(self.root/'.owner.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        self.owner = os.fdopen(fd, 'rb')
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_nlink != 1:
+                raise ValueError('Invalid session ownership lock')
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # Validate the entire set before removing anything. Only directories
+            # created by mkdtemp below are eligible, never arbitrary root content.
+            orphans = [path for path in self.root.iterdir() if path.name != '.owner.lock']
+            for path in orphans:
+                info = path.lstat()
+                if not re.fullmatch(r'visitor-[a-z0-9_]{8}', path.name) or not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
+                    raise ValueError('Unexpected session storage; operator inspection required')
+            for path in orphans:
+                shutil.rmtree(path)
+        except Exception:
+            self.owner.close()
+            raise
         self.factory, self.maximum, self.ttl, self.clock = factory, maximum, ttl, clock
         self.entries = {}
         self.lock = threading.Lock()
@@ -93,7 +117,7 @@ class Application:
         self.origin, self.host = origin, parsed.netloc
         root = Path(root)
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if root.is_symlink() or root.stat().st_mode & 0o077:
+        if root.is_symlink() or not root.is_dir() or root.stat().st_uid != os.getuid() or root.stat().st_mode & 0o077:
             raise ValueError('Application data root must be private')
         admission = None
         if model_id or region:
@@ -190,8 +214,8 @@ def create_from_environment():
     region = os.environ.get('HANDOFF_REGION')
     maximum = int(os.environ['HANDOFF_MODEL_CALLS']) if model or region else None
     app = Application(origin, root, model_id=model, region=region, maximum_model_calls=maximum)
-    # Cleanup is independent of incoming traffic. Restart recovery of expired
-    # orphan directories still requires the operator's retention job.
+    # Startup removes orphan sessions under an exclusive process lock. Ongoing
+    # cleanup is independent of incoming traffic.
     def cleanup():
         while True:
             time.sleep(60)

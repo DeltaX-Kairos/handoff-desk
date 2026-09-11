@@ -18,6 +18,7 @@ class HostedTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.now = [0]
         self.app = Application('https://demo.example', Path(self.temp.name)/'app', clock=lambda:self.now[0])
+        self.addCleanup(lambda: self.app.sessions.owner.close())
 
     def call(self, path='/', cookie=None, token=None, payload=None, origin='https://demo.example', host='demo.example'):
         data = json.dumps(payload).encode() if payload is not None else b''
@@ -75,6 +76,50 @@ class HostedTests(unittest.TestCase):
         self.assertEqual(self.call()['status'],'503 Service Unavailable')
         entry=next(iter(self.app.sessions.entries.values()));entry.actions=120
         self.assertEqual(self.call('/action',a,t,{'action':'review'})['status'],'429 Too Many Requests')
+
+    def test_restart_removes_orphans_preserves_allowance_and_invalidates_cookie(self):
+        cookie,_=self.visitor()
+        visitor=next(iter(self.app.sessions.entries.values())).root
+        outside=Path(self.temp.name)/'preserved.txt';outside.write_text('keep')
+        (visitor/'external-link').symlink_to(outside)
+        root=self.app.sessions.root.parent
+        database=root/'model-allowance.sqlite'
+        self.assertTrue(Admission(database,1).reserve())
+        before=database.read_bytes()
+        # Simulate the old process exiting; its OS lock is then released.
+        self.app.sessions.owner.close()
+        self.app=Application('https://demo.example',root)
+        self.assertFalse(visitor.exists())
+        self.assertEqual(outside.read_text(),'keep')
+        self.assertEqual(database.read_bytes(),before)
+        self.assertFalse(Admission(database,1).reserve())
+        self.assertEqual(self.call('/state',cookie)['status'],'401 Unauthorized')
+        self.visitor()
+
+    def test_second_worker_cannot_clean_live_sessions(self):
+        self.visitor()
+        visitor=next(iter(self.app.sessions.entries.values())).root
+        with self.assertRaises(BlockingIOError):
+            Application('https://demo.example',self.app.sessions.root.parent)
+        self.assertTrue(visitor.is_dir())
+
+    def test_startup_rejects_unexpected_or_symlinked_session_entries(self):
+        self.visitor()
+        visitor=next(iter(self.app.sessions.entries.values())).root
+        root=self.app.sessions.root
+        self.app.sessions.owner.close()
+        outside=Path(self.temp.name)/'outside';outside.mkdir()
+        (outside/'keep').write_text('preserve')
+        for name,symlink in [('unrelated',False),('visitor-abcdefgh',True)]:
+            with self.subTest(name=name):
+                suspect=root/name
+                if symlink:suspect.symlink_to(outside,target_is_directory=True)
+                else:suspect.write_text('unrelated')
+                with self.assertRaises(ValueError):
+                    Application('https://demo.example',root.parent)
+                self.assertTrue(visitor.is_dir())
+                self.assertEqual((outside/'keep').read_text(),'preserve')
+                suspect.unlink()
 
 
 class AdmissionTests(unittest.TestCase):
